@@ -41,7 +41,7 @@ remove_dns_from_config() {
     if [ -f "$config_file" ] && grep -q '^[[:space:]]*DNS[[:space:]]*=' "$config_file"; then
         info "Removing DNS line from WARP configuration"
         sed -i '/^[[:space:]]*DNS[[:space:]]*=/d' "$config_file"
-        ok "DNS removed from $(basename "$config_file")"
+        ok "DNS line removed"
         return 0
     fi
     return 1
