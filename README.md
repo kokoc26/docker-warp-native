@@ -117,6 +117,8 @@ Should display something like:
 
 After starting the container, WARP interface will be available on the host system. You can route traffic through it in Xray configuration.
 
+> **Note:** The container removes the `DNS = ...` line from the generated WireGuard configuration. This project uses `Table = off`, so `warp` is a selective transport interface — applications opt in by binding to it explicitly (e.g. `curl --interface warp`, Xray `sockopt.interface: "warp"`). The default Cloudflare DNS in the WireGuard config is meant for full-tunnel setups and would otherwise interfere with local Docker/Podman name resolution when the container shares a network namespace with another service.
+
 ## Templates for Xray Configuration
 
 <details>

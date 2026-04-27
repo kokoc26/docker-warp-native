@@ -35,6 +35,18 @@ license_matches() {
     [ "$stored_hash" = "$current_hash" ]
 }
 
+remove_dns_from_config() {
+    config_file="$1"
+
+    if [ -f "$config_file" ] && grep -q '^[[:space:]]*DNS[[:space:]]*=' "$config_file"; then
+        info "Removing DNS line from WARP configuration"
+        sed -i '/^[[:space:]]*DNS[[:space:]]*=/d' "$config_file"
+        ok "DNS removed from $(basename "$config_file")"
+        return 0
+    fi
+    return 1
+}
+
 echo ""
 printf "\033[1;96m━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\033[0m\n"
 printf "\033[1;96m  \033[0m \033[1;97mDocker\033[0m \033[1;36mWARP\033[0m \033[1;97mNative\033[0m\n"
@@ -64,10 +76,22 @@ fi
 # Check if warp.conf already exists
 if [ -f /etc/wireguard/warp.conf ]; then
     info "Found existing WARP configuration"
-    
+
+    dns_config_changed=0
+    if remove_dns_from_config /etc/wireguard/warp.conf; then
+        dns_config_changed=1
+    fi
+
     # Check if interface is already up
     if wg show warp >/dev/null 2>&1; then
-        ok "WARP interface is already active"
+        if [ "$dns_config_changed" -eq 1 ]; then
+            info "Existing config had a DNS line, restarting WARP interface to apply changes..."
+            wg-quick down warp 2>/dev/null || true
+            wg-quick up warp || error_exit "Failed to restart WARP interface"
+            ok "WARP interface restarted"
+        else
+            ok "WARP interface is already active"
+        fi
     else
         info "Starting WARP interface..."
         wg-quick up warp || error_exit "Failed to start WARP interface"
@@ -148,6 +172,8 @@ else
         sed -i 's/,\s*[0-9a-fA-F:]\+\/128//' wgcf-profile.conf
         sed -i '/Address = [0-9a-fA-F:]\+\/128/d' wgcf-profile.conf
     fi
+
+    remove_dns_from_config wgcf-profile.conf
     
     # Rename config file
     mv wgcf-profile.conf warp.conf
